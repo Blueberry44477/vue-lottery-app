@@ -1,48 +1,292 @@
-# Vue Lottery App
+# Vue Lottery App &bull; Лабораторна робота №5
 
-A Vue 3 application built for **Web Systems Laboratory Work №4**. The application allows you to register participants, manage a participant list (CRUD), and randomly select lottery winners.
+Застосунок розроблено в рамках курсу «Веб-орієнтовані системи» / **Лабораторна робота №5**:  
+**«Керування маршрутами з використанням vue-router, застосування патерну Repository для роботи з REST API та реалізація авторизації на основі JWT»**.
 
-## Screenshot
-<img src="/app-screenshot.png" width="750" alt="App Screenshot">
+Гілка проекту: **`feature/routing`**  
+Live Demo (GitHub Pages): [https://blueberry44477.github.io/vue-lottery-app/](https://blueberry44477.github.io/vue-lottery-app/)
 
-## Features
+---
 
-- **Participant Registration**: Form validation ensuring required fields, valid email format, unique email check, phone number in `+380XXXXXXXXX` format, and no future dates of birth.
-- **Random Winner Selection**: 
-  - Select up to 3 winners randomly from the pool of registered participants.
-  - Winners are unique (a participant cannot win twice).
-  - Easily remove winners to pick again.
-- **Participants Management (CRUD)**: 
-  - View all participants in a responsive table.
-  - **Edit** or **Delete** participants (with modal confirmations).
-  - **Sort** participants by Name (A-Z) or Date of Birth.
-  - **Filter/Search** participants by name (includes a 300ms debounce).
-- **Data Persistence**: All participant data is automatically saved to and restored from `localStorage`.
-- **Keyboard Accessibility**: Supports `Enter` for form submissions and `Esc` for closing modals.
+## 🚀 Основний функціонал та реалізовані вимоги
 
-## Tech Stack
+1. **Маршрутизація (Vue Router 4)**:
+   - Всі сторінки підтримують **ліниве завантаження компонентів** (`() => import(...)`).
+   - Активні посилання навігації візуально виділяються за допомогою стилів `active` / `router-link-active`.
+   - Заголовок сторінки (`document.title`) динамічно змінюється при навігації завдяки `meta.title` та хуку `router.afterEach`.
+   - Сторінка 404 (catch-all маршрут `/:pathMatch(.*)*`) з можливістю повернення на головну.
 
-- **Framework**: [Vue 3](https://vuejs.org/) (Composition API)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Tooling**: [Vite](https://vitejs.dev/)
+2. **Структура Layouts (через `meta.layout`)**:
+   - `DefaultLayout`: повнофункціональний лейаут для основних розділів (включає `<AppHeader>`, `<Logo>`, `<AppNavigation>`, контейнер контенту та футер).
+   - `AuthLayout`: мінімалістичний фокусований лейаут для сторінки входу `/login`.
 
-## Project Setup
+3. **Патерн Repository (Репозиторій)**:
+   - Узагальнені (generic) інтерфейси у `src/services/interfaces.ts`: `Readable<T>`, `Creatable<T, TCreate>`, `Editable<T, TUpdate>`, `Deletable<T>`.
+   - Модель `User` за схемою **DummyJSON Users** та DTO типи `CreateUserDto`, `UpdateUserDto`.
+   - Репозиторій `UserService`, що імплементує інтерфейси та виконує CRUD-операції з сервером.
+   - Сервіс `AuthService` для виконання запитів авторизації (`login`, `getCurrentUser`, `refresh`).
+   - Фабрика `ServiceProvider` — єдина точка доступу до сервісів (`ServiceProvider.users`, `ServiceProvider.auth`), що позбавляє клієнтський код необхідності створення сервісів через `new`.
+   - Клас `FakeUserService` у `src/services/__tests__/fake-user.service.ts` для ізольованого тестування.
 
-Make sure you have Node.js installed.
+4. **HTTP-клієнт та безпека**:
+   - Модуль `src/api/http-client.ts` інкапсулює базову адресу з `import.meta.env.VITE_API_URL` (зберігається у `.env`, приклад у `.env.example`).
+   - Автоматичне додавання заголовка `Authorization: Bearer <accessToken>` для запитів.
+   - **Interceptor на 401 помилку**: при закінченні терміну дії токена автоматично надсилається запит на `POST /auth/refresh`, оновлюються токени та повторюється попередній запит без втрати стану.
 
+5. **JWT Авторизація та захист маршрутів (Navigation Guards)**:
+   - Сторінка `/login` з валідацією форми через **VeeValidate + Yup**.
+   - Тестові облікові дані DummyJSON: **`emilys`** / **`emilyspass`** (додано кнопку швидкого автозаповнення).
+   - Стан авторизації та токени зберігаються в **Pinia store** (`useAuthStore`) та синхронізуються з `localStorage`.
+   - Захист маршрутів через `meta.requiresAuth`: неавторизований користувач при переході на `/users` автоматично перенаправляється на `/login?redirect=...`. Після успішного логіну повертається на попередню сторінку.
+   - Якщо користувач вже авторизований, відкриття `/login` автоматично перенаправляє на `/users`.
+   - При авторизації кнопка "Login" замінюється на "Logout" у хедері з відображенням імені та аватара.
+
+6. **Управління користувачами (CRUD, Пошук, Пагінація)**:
+   - Таблиця користувачів з DummyJSON Users.
+   - **Пагінація (limit/skip) та пошук (search query) синхронізовані з query-параметрами URL** (наприклад, `/users?page=2&q=john`). Будь-яке посилання на конкретну сторінку та фільтр можна скопіювати або відкрити в новій вкладці.
+   - **Динамічний маршрут** `/users/:id` для детальної інформації про користувача з передачею `id` через `props: true`.
+   - **Вкладений маршрут редагування** `/users/:id/edit` (nested route).
+   - Форми створення та оновлення містять поля: `firstName`, `lastName`, `email`, `username`, `password`, `age`, `gender`, `phone` та валідуються за допомогою **VeeValidate + Yup**.
+   - **Оптимістичне/локальне оновлення стану**: оскільки DummyJSON лише імітує операції POST/PUT/DELETE, стан миттєво синхронізується в Pinia-сторі, тому створення, зміна чи видалення користувача відображаються одразу без перезавантаження.
+
+7. **Стилізація (Tailwind CSS 4)**:
+   - Повна стилізація інтерфейсу виконана за допомогою утилітарних класів Tailwind CSS 4.
+   - Адаптивний та сучасний дизайн для всіх сторінок, модальних вікон, таблиць та форм.
+
+---
+
+## 🛠️ Технічний стек
+
+- **Фреймворк**: [Vue 3](https://vuejs.org/) (Composition API, `<script setup lang="ts">`)
+- **Маршрутизація**: [Vue Router 4](https://router.vuejs.org/)
+- **Менеджер стану**: [Pinia](https://pinia.vuejs.org/)
+- **Валідація форм**: [VeeValidate 4](https://vee-validate.logaretm.com/) + [Yup](https://github.com/jquense/yup)
+- **Мова**: [TypeScript](https://www.typescriptlang.org/)
+- **Стилі**: [Tailwind CSS 4](https://tailwindcss.com/)
+
+- **Збірка**: [Vite](https://vitejs.dev/)
+- **Тестування**: [Vitest](https://vitest.dev/) + [Vue Test Utils](https://test-utils.vuejs.org/)
+- **Лінтери**: ESLint + Oxlint + Prettier
+
+---
+
+## 📋 Сторінки застосунку
+
+| Шлях (Path) | Назва | Опис | Layout | Доступ |
+|---|---|---|---|---|
+| `/` | Home | Опис проєкту, стек технологій, посилання на GitHub | DefaultLayout | Публічний |
+| `/about` | About author | Інформація про студента, блок Technical Skills, контакти | DefaultLayout | Публічний |
+| `/login` | Login | Вхід за JWT (username/password), валідація VeeValidate + Yup | AuthLayout | Тільки гості |
+| `/users` | Users List | Таблиця користувачів, пошук, пагінація в URL query, CRUD | DefaultLayout | `requiresAuth` |
+| `/users/:id` | User Details | Повна картка користувача (динамічний роут, `props: true`) | DefaultLayout | `requiresAuth` |
+| `/users/:id/edit` | User Edit | Вкладений маршрут редагування даних користувача | DefaultLayout | `requiresAuth` |
+| `/:pathMatch(.*)*` | 404 Not Found | Catch-all сторінка з посиланням на головну | DefaultLayout | Публічний |
+
+---
+
+## ⚙️ Налаштування та запуск проєкту
+
+### 1. Клонування та перехід у гілку:
 ```bash
-# Install dependencies
-npm install
+git clone https://github.com/Blueberry44477/vue-lottery-app.git
+cd vue-lottery-app
+git checkout feature/routing
+```
 
-# Start the development server
+### 2. Встановлення залежностей:
+```bash
+npm install
+```
+
+### 3. Налаштування змінних середовища:
+Файл `.env` не комітиться у репозиторій, натомість надається `.env.example`:
+```bash
+cp .env.example .env
+```
+Вміст `.env`:
+```env
+VITE_API_URL=https://dummyjson.com
+```
+
+### 4. Запуск у режимі розробки:
+```bash
 npm run dev
 ```
 
-## Available Scripts
+### 5. Запуск юніт-тестів:
+```bash
+npm run test:unit -- --run
+```
 
-- `npm run dev`: Starts the local Vite development server.
-- `npm run build`: Type-checks and bundles the application for production.
-- `npm run type-check`: Runs TypeScript type checking via `vue-tsc`.
-- `npm run lint`: Lints the codebase using ESLint and Oxlint.
-- `npm run format`: Formats the code using Prettier.
+### 6. Перевірка типів та лінтинг:
+```bash
+npm run type-check
+npm run lint
+```
+
+### 7. Збірка для продакшену:
+```bash
+npm run build
+```
+
+---
+
+## 📚 Відповіді на контрольні запитання
+
+### 1. Що таке патерн репозиторій і для чого він використовується в розробці програмного забезпечення?
+**Патерн Репозиторій (Repository Pattern)** — це структурний шаблон проєктування, який виступає посередником між рівнем бізнес-логіки додатку (компоненти, стори) та рівнем доступу до даних (REST API, бази даних, LocalStorage).  
+Він приховує деталі отримання, збереження та перетворення даних за зрозумілим об'єктно-орієнтованим інтерфейсом, роблячи решту програми незалежною від того, де і як саме ці дані зберігаються.
+
+### 2. Які компоненти включаються в реалізацію патерну репозиторій?
+1. **Інтерфейси контрактів (Contracts/Interfaces)**: визначають набір операцій над даними (наприклад, `Readable<T>`, `Creatable<T, TCreate>`, `Editable<T, TUpdate>`, `Deletable<T>`).
+2. **Конкретний репозиторій (Concrete Service/Repository)**: клас (наприклад, `UserService`), який імплементує ці інтерфейси та містить безпосередню логіку відправки HTTP-запитів.
+3. **Модель даних / DTO (Model / DTO)**: типізовані структури сутностей (наприклад, `User`, `CreateUserDto`, `UpdateUserDto`).
+4. **Клієнт доступу до джерела даних**: загальний HTTP-клієнт (`http-client.ts`), що знає про `fetch`/`axios`, базу URL та заголовки.
+5. **Фабрика або контейнер залежностей (Service Provider / DI Container)**: єдина точка доступу до екземплярів репозиторіїв (`ServiceProvider.users`).
+6. **Клієнтський код (Client Code)**: компоненти Vue або Pinia-стори, які викликають методи репозиторію.
+
+### 3. Яка роль моделі в патерні репозиторій?
+Модель (Model) описує структуру та форму сутності даних (наприклад, поля `id`, `firstName`, `email`, `role`). Вона гарантує сувору типізацію (TypeScript) по всьому додатку, забезпечує автодоповнення в IDE та запобігає передачі некоректних полів при запитах до API. DTO (Data Transfer Objects) додатково описують точну форму даних для операцій створення чи редагування.
+
+### 4. Як патерн репозиторій допомагає відокремити логіку доступу до даних від бізнес-логіки додатку?
+Завдяки репозиторію компоненти та стори не знають:
+- Який транспорт використовується (HTTP `fetch`, `axios`, WebSockets чи `localStorage`);
+- Які точні URL ендпоінтів викликаються (`/users/search?q=...`);
+- Які заголовки або серіалізацію необхідно формувати.  
+Компонент просто викликає `ServiceProvider.users.getById(id)` і отримує готовий типізований об'єкт. Якщо бекенд перейде з REST на GraphQL або зміняться шляхи API, зміни вносяться виключно в клас `UserService`, а UI-компоненти залишаються незмінними.
+
+### 5. Як патерн репозиторій сприяє тестованості програми?
+Оскільки компоненти та стори залежать від абстрактного інтерфейсу репозиторію, у юніт-тестах реальний клас, що робить виклики до мережі, легко замінити на фіктивний (`FakeUserService` або мок). Це дозволяє тестувати поведінку UI та Pinia-сторів миттєво, стабільно і без залежності від Інтернету чи реального сервера.
+
+### 6. Які переваги надає використання патерну репозиторій?
+- **Single Responsibility**: відокремлення коду UI від коду мережевих запитів.
+- **Зменшення дублювання (DRY)**: запити до одного ресурсу зосереджені в одному класі.
+- **Легкість заміни джерела даних**: перемикання з API на офлайн-кеш або mock-сервер.
+- **Повна типізація та централізована обробка помилок**.
+- **Спрощене тестування**.
+
+### 7. Що таке Vue Router і для чого він використовується?
+**Vue Router** — це офіційна бібліотека маршрутизації для Vue.js. Вона дозволяє створювати багатосторінкові односторінкові додатки (SPA), де зміна URL у браузері призводить до заміни відображуваних компонентів без повного перезавантаження HTML-сторінки браузером.
+
+### 8. Як оголошуються маршрути у Vue Router?
+Маршрути оголошуються масивом об'єктів конфігурації у виклику `createRouter`:
+```typescript
+const routes = [
+  {
+    path: '/users/:id',
+    name: 'user-details',
+    component: () => import('@/views/UserDetailView.vue'),
+    props: true,
+    children: [
+      {
+        path: 'edit',
+        name: 'user-edit',
+        component: () => import('@/views/UserEditView.vue'),
+      },
+    ],
+    meta: { requiresAuth: true, title: 'Деталі користувача' },
+  },
+]
+```
+
+### 9. Чим відрізняються RouterLink і RouterView?
+- `<RouterLink to="...">`: компонент-посилання, що генерує тег `<a>` і перехоплює подію кліку, здійснюючи навігацію через History API без перезавантаження сторінки. Також автоматично додає CSS-класи активного стану (`router-link-active`, `router-link-exact-active`).
+- `<RouterView />`: динамічний компонент-контейнер (placeholder), у який монтується компонент, що відповідає поточному активному URL.
+
+### 10. Як передати параметри маршруту в компонент?
+1. **Через властивість `props: true` у маршруті** (рекомендовано):
+   Vue Router автоматично передає параметри шляху (`:id`) як стандартні `defineProps` у компонент. Це усуває пряму прив'язку компонента до об'єкта `$route`.
+2. **Через функцію перетворення `props: (route) => ({ id: Number(route.params.id) })`**: дозволяє типізувати та привести типи параметрів перед передачею.
+3. **Через `useRoute().params`**: доступ до параметрів безпосередньо з контексту роутера всередині `setup()`.
+
+### 11. Як створити вкладені маршрути?
+Вкладені маршрути оголошуються за допомогою властивості `children` у конфігурації батьківського маршруту. У шаблоні батьківського компонента обов'язково розміщується власний `<RouterView />`, у якому роутер відображатиме дочірній компонент:
+```typescript
+{
+  path: '/users/:id',
+  component: () => import('@/views/UserDetailView.vue'),
+  props: true,
+  children: [
+    {
+      path: 'edit', // доступний за адресою /users/:id/edit
+      component: () => import('@/views/UserEditView.vue'),
+      props: true,
+    },
+  ],
+}
+```
+
+### 12. Як працюють навігаційні guard-и?
+Навігаційні guard-и — це хуки-перехоплювачі життєвого циклу маршрутизації:
+- **Глобальні**: `router.beforeEach((to, from) => { ... })` викликається перед кожним переходом. Він може дозволити перехід, скасувати його (`return false`) або перенаправити користувача на інший маршрут (наприклад, `return { name: 'login' }`).
+- **Помаршрутні**: `beforeEnter` безпосередньо у визначенні конкретного маршруту.
+- **Внутрішньокомпонентні**: `onBeforeRouteUpdate`, `onBeforeRouteLeave`.
+
+### 13. Для чого використовується поле meta у маршруті?
+Поле `meta` — це довільний об'єкт для зберігання користувацьких метаданих маршруту. Воно доступне у властивостях `to.meta` та `route.meta`.  
+Типове застосування:
+- `requiresAuth: true` — позначка, що сторінка потребує авторизації;
+- `title: 'Заголовок'` — динамічна зміна назви вкладки браузера;
+- `layout: 'auth' | 'default'` — вибір шаблону розмітки;
+- `roles: ['admin']` — перевірка прав доступу.
+
+### 14. Як організувати структуру Layouts у додатку?
+У `App.vue` використовується динамічний компонент `<component :is="currentLayout">`:
+```vue
+<template>
+  <component :is="layoutComponent">
+    <RouterView />
+  </component>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import AuthLayout from '@/layouts/AuthLayout.vue'
+
+const route = useRoute()
+const layoutComponent = computed(() => {
+  return route.meta.layout === 'auth' ? AuthLayout : DefaultLayout
+})
+</script>
+```
+Усі маршрути у полі `meta.layout` вказують потрібний лейаут.
+
+### 15. Що таке JWT і з яких частин він складається? Де його безпечніше зберігати на клієнті і які ризики має localStorage?
+**JWT (JSON Web Token)** — це відкритий компактний стандарт (RFC 7519) для безпечної передачі інформації у вигляді підписаного JSON-об'єкта.  
+Він складається з трьох частин, розділених крапками (`Header.Payload.Signature`):
+1. **Header**: алгоритм підпису (наприклад, HS256) та тип токена (`JWT`).
+2. **Payload**: корисне навантаження (ідентифікатор користувача, роль, строк придатності `exp`).
+3. **Signature**: криптографічний хеш перших двох частин, підписаний секретним ключем сервера.
+
+**Зберігання на клієнті**:
+- **`localStorage`**: доступний для будь-якого JavaScript-коду, що працює на сторінці. Головний ризик — **XSS-атаки (Cross-Site Scripting)**: якщо зловмисник впровадить шкідливий скрипт, токен буде викрадено.
+- **Безпечніший варіант**: зберігання токенів у **`httpOnly`, `Secure`, `SameSite` Cookies**. У цьому випадку JavaScript взагалі не має доступу до токена, що нівелює загрозу його викрадення через XSS.
+
+### 16. Чим відрізняються accessToken та refreshToken?
+- **`accessToken`**: короткоживучий токен (зазвичай 5–15 хвилин). Передається в заголовку кожного запиту (`Authorization: Bearer <token>`) для підтвердження прав. Якщо його буде перехоплено, шкода обмежена коротким часом життя.
+- **`refreshToken`**: довгоживучий токен (дні або тижні). Зберігається у безпечному місці і використовується **лише для отримання нової пари токенів** при закінченні терміну дії `accessToken` через спеціальний ендпоінт (`/auth/refresh`).
+
+### 17. Чому query-параметри краще підходять для пагінації та пошуку, ніж локальний стан компонента?
+1. **Збереження стану (Shareability)**: посилання типу `/users?page=3&q=john` можна надіслати іншому користувачу, і він відкриє точно ту саму сторінку з тими самими результатами пошуку.
+2. **Історія переходів браузера (Browser History)**: користувач може користуватися кнопками «Назад» та «Вперед» у браузері для переміщення між сторінками списку або повернення до попереднього пошуку.
+3. **Закладки та оновлення**: оновлення сторінки (F5) не скидає фільтри чи сторінку на першу.
+
+### 18. Чому після DELETE /users/:id на DummyJSON користувач залишається в списку, якщо не оновити локальний стан, і як це виправити?
+Публічний тестовий бекенд **DummyJSON є навчальним mock-сервісом зі статичною базою даних**.  
+Будь-які запити на додавання (`POST /users/add`), оновлення (`PUT /users/:id`) або видалення (`DELETE /users/:id`) лише **імітують успішне виконання** (сервер повертає JSON-відповідь зі статусом 200/201 та даними об'єкта), але фізично запис у базі даних сервера не змінюється і не видаляється. Наступний виклик `GET /users` поверне початковий список.  
+**Як це виправити**:  
+Після отримання успішної відповіді від сервера клієнтський додаток зобов'язаний **оновити локальний стан**:
+- Для видалення: `users.value = users.value.filter(u => u.id !== id)` у Pinia-сторі або ref;
+- Для створення: додати новий об'єкт у локальний масив (`unshift`);
+- Для редагування: замінити об'єкт користувача у локальному масиві.  
+Завдяки цьому користувач в інтерфейсі одразу бачить актуальний стан без перезавантаження.
+
+---
+
+## 👤 Автор
+- **Студент**: Blueberry44477
+- **GitHub**: [https://github.com/Blueberry44477](https://github.com/Blueberry44477)
+- **Email**: vas172674@gmail.com
+- **Навчальний заклад**: КПІ ім. Ігоря Сікорського

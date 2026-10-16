@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "build-only": "vite build",
+    "build-only": "vite build && cp dist/index.html dist/404.html",
     "type-check": "vue-tsc --build",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
@@ -17,8 +19,12 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "pinia": "^4.1.0",
     "tailwindcss": "^4.3.3",
-    "vue": "^3.5.42"
+    "vee-validate": "^4.15.1",
+    "vue": "^3.5.42",
+    "vue-router": "^5.4.0",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.5",
@@ -33,6 +39,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "~1.82.0",
     "eslint-plugin-vue": "~10.11.0",
+    "gh-pages": "^6.3.0",
     "jiti": "^2.7.0",
     "jsdom": "^30.0.1",
     "npm-run-all2": "^9.0.3",

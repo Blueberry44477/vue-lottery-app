@@ -44,122 +44,124 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
-import type { Participant } from '../types';
-import AppInput from './AppInput.vue';
-import AppButton from './AppButton.vue';
+import { reactive } from 'vue'
+import type { Participant } from '../types'
+import AppInput from './AppInput.vue'
+import AppButton from './AppButton.vue'
 
 const props = defineProps({
   existingEmails: {
     type: Array as () => string[],
-    required: true
+    required: true,
   },
   initialData: {
     type: Object as () => Partial<Participant> | null,
-    default: null
+    default: null,
   },
   isEditMode: {
     type: Boolean,
-    default: false
-  }
-});
+    default: false,
+  },
+})
 
-const emit = defineEmits(['save']);
+const emit = defineEmits(['save'])
 
 const form = reactive({
   name: props.initialData?.name || '',
   dateOfBirth: props.initialData?.dateOfBirth || '',
   email: props.initialData?.email || '',
-  phone: props.initialData?.phone || ''
-});
+  phone: props.initialData?.phone || '',
+})
 
 const errors = reactive({
   name: '',
   dateOfBirth: '',
   email: '',
-  phone: ''
-});
+  phone: '',
+})
 
 const validateForm = () => {
-  let isValid = true;
-  errors.name = '';
-  errors.dateOfBirth = '';
-  errors.email = '';
-  errors.phone = '';
+  let isValid = true
+  errors.name = ''
+  errors.dateOfBirth = ''
+  errors.email = ''
+  errors.phone = ''
 
   if (!form.name) {
-    errors.name = 'This value is required.';
-    isValid = false;
+    errors.name = 'This value is required.'
+    isValid = false
   }
 
   if (!form.dateOfBirth) {
-    errors.dateOfBirth = 'This value is required.';
-    isValid = false;
+    errors.dateOfBirth = 'This value is required.'
+    isValid = false
   } else {
-    const dob = new Date(form.dateOfBirth);
-    const now = new Date();
+    const dob = new Date(form.dateOfBirth)
+    const now = new Date()
     if (dob > now) {
-      errors.dateOfBirth = 'Date of birth cannot be in the future.';
-      isValid = false;
+      errors.dateOfBirth = 'Date of birth cannot be in the future.'
+      isValid = false
     }
   }
 
   if (!form.email) {
-    errors.email = 'This value is required.';
-    isValid = false;
+    errors.email = 'This value is required.'
+    isValid = false
   } else {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(form.email)) {
-      errors.email = 'Invalid email format.';
-      isValid = false;
+      errors.email = 'Invalid email format.'
+      isValid = false
     } else {
-      const emailLower = form.email.toLowerCase();
-      const isDuplicate = props.existingEmails.some((existing) => existing.toLowerCase() === emailLower);
+      const emailLower = form.email.toLowerCase()
+      const isDuplicate = props.existingEmails.some(
+        (existing) => existing.toLowerCase() === emailLower,
+      )
       if (isDuplicate) {
         // If edit mode and it's their own email, it's allowed.
-        const originalEmail = props.initialData?.email?.toLowerCase();
+        const originalEmail = props.initialData?.email?.toLowerCase()
         if (!props.isEditMode || emailLower !== originalEmail) {
-          errors.email = 'User with this email already exists.';
-          isValid = false;
+          errors.email = 'User with this email already exists.'
+          isValid = false
         }
       }
     }
   }
 
   if (!form.phone) {
-    errors.phone = 'This value is required.';
-    isValid = false;
+    errors.phone = 'This value is required.'
+    isValid = false
   } else {
-    const phoneRegex = /^\+380\d{9}$/;
+    const phoneRegex = /^\+380\d{9}$/
     if (!phoneRegex.test(form.phone)) {
-      errors.phone = 'Phone must be in format +380XXXXXXXXX.';
-      isValid = false;
+      errors.phone = 'Phone must be in format +380XXXXXXXXX.'
+      isValid = false
     }
   }
 
-  return isValid;
-};
+  return isValid
+}
 
 const submitForm = () => {
   if (validateForm()) {
     emit('save', {
       id: props.initialData?.id || Date.now().toString(),
-      ...form
-    });
+      ...form,
+    })
     if (!props.isEditMode) {
-      resetForm();
+      resetForm()
     }
   }
-};
+}
 
 const resetForm = () => {
-  form.name = '';
-  form.dateOfBirth = '';
-  form.email = '';
-  form.phone = '';
-  errors.name = '';
-  errors.dateOfBirth = '';
-  errors.email = '';
-  errors.phone = '';
-};
+  form.name = ''
+  form.dateOfBirth = ''
+  form.email = ''
+  form.phone = ''
+  errors.name = ''
+  errors.dateOfBirth = ''
+  errors.email = ''
+  errors.phone = ''
+}
 </script>

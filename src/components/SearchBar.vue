@@ -10,19 +10,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch } from 'vue'
 
-const emit = defineEmits(['filter-by-name']);
-const searchQuery = ref('');
+const emit = defineEmits(['filter-by-name'])
+const searchQuery = ref('')
 
-let timeout: number | null = null;
+let timeout: number | null = null
 
 watch(searchQuery, (newVal) => {
   if (timeout) {
-    clearTimeout(timeout);
+    clearTimeout(timeout)
   }
   timeout = window.setTimeout(() => {
-    emit('filter-by-name', newVal);
-  }, 300);
-});
+    emit('filter-by-name', newVal)
+  }, 300)
+})
 </script>
